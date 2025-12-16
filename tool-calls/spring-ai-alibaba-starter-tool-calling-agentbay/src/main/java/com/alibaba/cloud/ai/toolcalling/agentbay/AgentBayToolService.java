@@ -27,8 +27,6 @@ import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 /**
@@ -46,12 +44,17 @@ public class AgentBayToolService {
 
 	private final AgentBayProperties properties;
 
-	// 用于存储创建的会话，便于后续操作
-	private final Map<String, Session> sessionCache = new ConcurrentHashMap<>();
-
 	public AgentBayToolService(AgentBay agentBay, AgentBayProperties properties) {
 		this.agentBay = agentBay;
 		this.properties = properties;
+	}
+
+	private Session getSession(String sessionId) {
+		SessionResult result = agentBay.get(sessionId);
+		if (result.isSuccess()) {
+			return result.getSession();
+		}
+		return null;
 	}
 
 	// ==================== 创建会话工具 ====================
@@ -70,8 +73,6 @@ public class AgentBayToolService {
 				if (result.isSuccess()) {
 					Session session = result.getSession();
 					String sessionId = session.getSessionId();
-
-					sessionCache.put(sessionId, session);
 
 					log.info("AgentBay session created successfully: {}", sessionId);
 					return new CreateSessionResponse(sessionId, true, "Session created successfully");
@@ -111,13 +112,12 @@ public class AgentBayToolService {
 			log.info("Deleting AgentBay session: {}", request.sessionId);
 
 			try {
-				Session session = sessionCache.get(request.sessionId);
+				Session session = getSession(request.sessionId);
 
 				if (session != null) {
 					DeleteResult result = agentBay.delete(session, false);
 
 					if (result.isSuccess()) {
-						sessionCache.remove(request.sessionId);
 						log.info("AgentBay session deleted successfully: {}", request.sessionId);
 						return new DeleteSessionResponse(true, "Session deleted successfully");
 					}
@@ -128,9 +128,9 @@ public class AgentBayToolService {
 					}
 				}
 				else {
-					log.warn("Session not found in cache: {}", request.sessionId);
+					log.warn("Session not found: {}", request.sessionId);
 					return new DeleteSessionResponse(false,
-							"Session not found. Please ensure the session was created in this service instance.");
+							"Session not found or already deleted.");
 				}
 			}
 			catch (Exception e) {
@@ -164,7 +164,7 @@ public class AgentBayToolService {
 			}
 
 			String sessionId = request.sessionId;
-			Session session = sessionCache.get(sessionId);
+			Session session = getSession(sessionId);
 
 			if (session == null) {
 				return new ExecuteShellResponse(null, -1, false, sessionId,
@@ -202,7 +202,6 @@ public class AgentBayToolService {
 					try {
 						log.info("Cleaning up session: {}", sessionId);
 						agentBay.delete(session, false);
-						sessionCache.remove(sessionId);
 					}
 					catch (Exception e) {
 						log.error("Error cleaning up session", e);
@@ -244,7 +243,7 @@ public class AgentBayToolService {
 			}
 
 			String sessionId = request.sessionId;
-			Session session = sessionCache.get(sessionId);
+			Session session = getSession(sessionId);
 
 			if (session == null) {
 				return new GetLinkResponse(null, false,
@@ -297,7 +296,7 @@ public class AgentBayToolService {
 			}
 
 			String sessionId = request.sessionId;
-			Session session = sessionCache.get(sessionId);
+			Session session = getSession(sessionId);
 
 			if (session == null) {
 				return new ReadFileResponse(null, false,
@@ -355,7 +354,7 @@ public class AgentBayToolService {
 			}
 
 			String sessionId = request.sessionId;
-			Session session = sessionCache.get(sessionId);
+			Session session = getSession(sessionId);
 
 			if (session == null) {
 				return new WriteFileResponse(false,
@@ -404,7 +403,7 @@ public class AgentBayToolService {
 			}
 
 			String sessionId = request.sessionId;
-			Session session = sessionCache.get(sessionId);
+			Session session = getSession(sessionId);
 
 			if (session == null) {
 				return new ListFilesResponse(null, false,
