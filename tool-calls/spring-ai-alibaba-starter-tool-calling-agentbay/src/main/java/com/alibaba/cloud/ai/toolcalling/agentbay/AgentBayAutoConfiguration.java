@@ -28,9 +28,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Description;
-
-import java.util.function.Function;
 
 /**
  * Auto-configuration for AgentBay Tool.

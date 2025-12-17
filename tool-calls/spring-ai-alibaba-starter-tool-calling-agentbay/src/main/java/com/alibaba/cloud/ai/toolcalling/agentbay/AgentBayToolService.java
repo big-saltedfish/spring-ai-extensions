@@ -49,7 +49,7 @@ public class AgentBayToolService {
 		this.properties = properties;
 	}
 
-	private Session getSession(String sessionId) {
+	private Session getSession(String sessionId) throws com.aliyun.agentbay.exception.AgentBayException {
 		SessionResult result = agentBay.get(sessionId);
 		if (result.isSuccess()) {
 			return result.getSession();
@@ -164,7 +164,14 @@ public class AgentBayToolService {
 			}
 
 			String sessionId = request.sessionId;
-			Session session = getSession(sessionId);
+			Session session;
+			try {
+				session = getSession(sessionId);
+			}
+			catch (Exception e) {
+				return new ExecuteShellResponse(null, -1, false, sessionId,
+						"Error getting session: " + e.getMessage());
+			}
 
 			if (session == null) {
 				return new ExecuteShellResponse(null, -1, false, sessionId,
@@ -243,7 +250,14 @@ public class AgentBayToolService {
 			}
 
 			String sessionId = request.sessionId;
-			Session session = getSession(sessionId);
+			Session session;
+			try {
+				session = getSession(sessionId);
+			}
+			catch (Exception e) {
+				return new GetLinkResponse(null, false,
+						"Error getting session: " + e.getMessage());
+			}
 
 			if (session == null) {
 				return new GetLinkResponse(null, false,
@@ -296,7 +310,14 @@ public class AgentBayToolService {
 			}
 
 			String sessionId = request.sessionId;
-			Session session = getSession(sessionId);
+			Session session;
+			try {
+				session = getSession(sessionId);
+			}
+			catch (Exception e) {
+				return new ReadFileResponse(null, false,
+						"Error getting session: " + e.getMessage());
+			}
 
 			if (session == null) {
 				return new ReadFileResponse(null, false,
@@ -354,7 +375,14 @@ public class AgentBayToolService {
 			}
 
 			String sessionId = request.sessionId;
-			Session session = getSession(sessionId);
+			Session session;
+			try {
+				session = getSession(sessionId);
+			}
+			catch (Exception e) {
+				return new WriteFileResponse(false,
+						"Error getting session: " + e.getMessage());
+			}
 
 			if (session == null) {
 				return new WriteFileResponse(false,
@@ -403,7 +431,14 @@ public class AgentBayToolService {
 			}
 
 			String sessionId = request.sessionId;
-			Session session = getSession(sessionId);
+			Session session;
+			try {
+				session = getSession(sessionId);
+			}
+			catch (Exception e) {
+				return new ListFilesResponse(null, false,
+						"Error getting session: " + e.getMessage());
+			}
 
 			if (session == null) {
 				return new ListFilesResponse(null, false,
