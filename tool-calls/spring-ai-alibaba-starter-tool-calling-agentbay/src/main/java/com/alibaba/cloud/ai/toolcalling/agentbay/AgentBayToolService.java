@@ -19,6 +19,7 @@ import com.aliyun.agentbay.AgentBay;
 import com.aliyun.agentbay.model.CommandResult;
 import com.aliyun.agentbay.model.DeleteResult;
 import com.aliyun.agentbay.model.SessionResult;
+import com.aliyun.agentbay.model.code.EnhancedCodeExecutionResult;
 import com.aliyun.agentbay.session.CreateSessionParams;
 import com.aliyun.agentbay.session.Session;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
@@ -494,6 +495,72 @@ public class AgentBayToolService {
 	}
 
 	public record ListFilesResponse(@JsonProperty("listing") @JsonPropertyDescription("Directory listing") String listing,
+			@JsonProperty("success") @JsonPropertyDescription("Whether the operation was successful") boolean success,
+			@JsonProperty("message") @JsonPropertyDescription("Additional information or error message") String message) {
+	}
+
+	public Function<RunCodeRequest, RunCodeResponse> runCodeTool() {
+		return request -> {
+			if (request.sessionId == null || request.sessionId.trim().isEmpty()) {
+				return new RunCodeResponse(null, null, false, "Session ID is required");
+			}
+
+			if (request.code == null || request.code.trim().isEmpty()) {
+				return new RunCodeResponse(null, null, false, "Code cannot be empty");
+			}
+
+			if (request.language == null || request.language.trim().isEmpty()) {
+				return new RunCodeResponse(null, null, false, "Language is required");
+			}
+
+			String sessionId = request.sessionId;
+			Session session;
+			try {
+				session = getSession(sessionId);
+			}
+			catch (Exception e) {
+				return new RunCodeResponse(null, null, false,
+						"Error getting session: " + e.getMessage());
+			}
+
+			if (session == null) {
+				return new RunCodeResponse(null, null, false,
+						"Session not found: " + sessionId + ". Please create a session first.");
+			}
+
+			try {
+				log.info("Executing {} code in session {}", request.language, sessionId);
+
+                EnhancedCodeExecutionResult result = session.getCode()
+						.runCode(request.code, request.language);
+
+				if (result.isSuccess()) {
+					log.info("Code executed successfully in session {}", sessionId);
+					return new RunCodeResponse(result.getResult(), result.getRequestId(), true,
+							"Code executed successfully");
+				}
+				else {
+					log.error("Code execution failed in session {}: {}", sessionId, result.getErrorMessage());
+					return new RunCodeResponse(null, result.getRequestId(), false,
+							"Code execution failed: " + result.getErrorMessage());
+				}
+			}
+			catch (Exception e) {
+				log.error("Error executing code in session", e);
+				return new RunCodeResponse(null, null, false, "Error executing code: " + e.getMessage());
+			}
+		};
+	}
+
+	@JsonClassDescription("Execute code in sandbox (supports Python, JavaScript.)")
+	public record RunCodeRequest(
+			@JsonProperty(required = true, value = "sessionId") @JsonPropertyDescription("Session ID (required)") String sessionId,
+			@JsonProperty(required = true, value = "code") @JsonPropertyDescription("Code to execute (required)") String code,
+			@JsonProperty(required = true, value = "language") @JsonPropertyDescription("Programming language (required, e.g., 'python', 'javascript')") String language) {
+	}
+
+	public record RunCodeResponse(@JsonProperty("output") @JsonPropertyDescription("Code execution output") String output,
+			@JsonProperty("requestId") @JsonPropertyDescription("Request ID") String requestId,
 			@JsonProperty("success") @JsonPropertyDescription("Whether the operation was successful") boolean success,
 			@JsonProperty("message") @JsonPropertyDescription("Additional information or error message") String message) {
 	}
